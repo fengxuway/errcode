@@ -160,14 +160,14 @@ func main() {
 		g.generate(typeName)
 	}
 
-	g.Printf("var _errcodeMap = map[string]int{\n")
+	g.Printf("var _ec%sMap = map[string]int{\n", g.codefunc)
 	for _, v := range g.mapKVLine {
 		g.Printf(v)
 	}
 	g.Printf("}\n\n")
 
 	g.Printf("func %s(e error) int {\n", g.codefunc)
-	g.Printf("\tv, ok := _errcodeMap[e.Error()]\n")
+	g.Printf("\tv, ok := _ec%sMap[e.Error()]\n", g.codefunc)
 	g.Printf("\tif ok {\n")
 	g.Printf("\t\treturn v\n")
 	g.Printf("\t}\n")

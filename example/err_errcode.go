@@ -73,7 +73,7 @@ func (i Err2) String() string {
 	}
 }
 
-var _errcodeMap = map[string]int{
+var _ecCodeMap = map[string]int{
 	ErrPlanIsEmpty.String():        int(ErrPlanIsEmpty),
 	ErrManualCreateFailed.String(): int(ErrManualCreateFailed),
 	ErrRPCFailed.String():          int(ErrRPCFailed),
@@ -88,7 +88,7 @@ var _errcodeMap = map[string]int{
 }
 
 func Code(e error) int {
-	v, ok := _errcodeMap[e.Error()]
+	v, ok := _ecCodeMap[e.Error()]
 	if ok {
 		return v
 	}
