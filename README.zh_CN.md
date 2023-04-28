@@ -5,7 +5,7 @@
 ## 安装
 
 ```
-go install github.com/fengxuway/errcode/cmd/errcode@latest
+go install github.com/fengxuway/errcode@latest
 ```
 
 ## 用法
@@ -19,7 +19,7 @@ Usage of errcode:
         errcode [flags] -type T [directory]
         errcode [flags] -type T files... # Must be a single package
 For more information, see:
-        https://pkg.go.dev/golang.org/x/tools/cmd/errcode
+        https://github.com/fengxuway/errcode
 Flags:
   -codefunc string
         error code function name (default "Code")

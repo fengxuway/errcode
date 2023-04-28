@@ -101,7 +101,7 @@ func Usage() {
 	fmt.Fprintf(os.Stderr, "\terrcode [flags] -type T [directory]\n")
 	fmt.Fprintf(os.Stderr, "\terrcode [flags] -type T files... # Must be a single package\n")
 	fmt.Fprintf(os.Stderr, "For more information, see:\n")
-	fmt.Fprintf(os.Stderr, "\thttps://pkg.go.dev/golang.org/x/tools/cmd/errcode\n")
+	fmt.Fprintf(os.Stderr, "\thttps://github.com/fengxuway/errcode\n")
 	fmt.Fprintf(os.Stderr, "Flags:\n")
 	flag.PrintDefaults()
 }

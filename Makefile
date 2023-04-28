@@ -1,3 +1,3 @@
 
 build:
-	go build cmd/errcode/*.go
+	go build errcode.go
