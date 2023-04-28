@@ -1,4 +1,4 @@
-module github.com/fengxuway/errorcode
+module github.com/fengxuway/errcode
 
 go 1.20
 
