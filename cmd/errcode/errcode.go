@@ -87,7 +87,7 @@ import (
 
 var (
 	typeNames   = flag.String("type", "", "comma-separated list of type names; must be set")
-	output      = flag.String("output", "", "output file name; default srcdir/<type>_string.go")
+	output      = flag.String("output", "", "output file name; default srcdir/<type>_errcode.go")
 	trimprefix  = flag.String("trimprefix", "", "trim the `prefix` from the generated constant names")
 	linecomment = flag.Bool("linecomment", false, "use line comment text as printed text when present")
 	buildTags   = flag.String("tags", "", "comma-separated list of build tags to apply")
@@ -180,7 +180,7 @@ func main() {
 	// Write to file.
 	outputName := *output
 	if outputName == "" {
-		baseName := fmt.Sprintf("%s_string.go", types[0])
+		baseName := fmt.Sprintf("%s_errcode.go", types[0])
 		outputName = filepath.Join(dir, strings.ToLower(baseName))
 	}
 	err := os.WriteFile(outputName, src, 0644)
