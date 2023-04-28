@@ -5,7 +5,7 @@
 ## 安装
 
 ```
-go install github.com/fengxuway/errcode@latest
+go install github.com/fengxuway/errcode/cmd/errcode@latest
 ```
 
 ## 用法

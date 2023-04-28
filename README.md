@@ -5,7 +5,7 @@ The source code is based on https://github.com/golang/tools/tree/master/cmd/stri
 ## Installation
 
 ```
-go install github.com/fengxuway/errcode@latest
+go install github.com/fengxuway/errcode/cmd/errcode@latest
 ```
 
 ## Usage

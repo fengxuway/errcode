@@ -2,7 +2,7 @@ package example
 
 //go:generate errcode -type=Err,Err2 --linecomment -unknowncode=-1 -codefunc=Code
 
-// errcode install command: go install github.com/fengxuway/errcode/cmd/errcode
+// errcode install command: github.com/fengxuway/errcode/cmd/errcode@latest
 
 // Err my custorm error enum
 type Err int
