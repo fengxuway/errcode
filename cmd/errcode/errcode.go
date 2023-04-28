@@ -91,6 +91,8 @@ var (
 	trimprefix  = flag.String("trimprefix", "", "trim the `prefix` from the generated constant names")
 	linecomment = flag.Bool("linecomment", false, "use line comment text as printed text when present")
 	buildTags   = flag.String("tags", "", "comma-separated list of build tags to apply")
+	codefunc    = flag.String("codefunc", "Code", "error code function name")
+	unknownCode = flag.Int("unknowncode", -1, "set unknown error code when not match")
 )
 
 // Usage is a replacement usage function for the flags package.
@@ -131,6 +133,8 @@ func main() {
 	g := Generator{
 		trimPrefix:  *trimprefix,
 		lineComment: *linecomment,
+		codefunc:    *codefunc,
+		unknownCode: *unknownCode,
 	}
 	// TODO(suzmue): accept other patterns for packages (directories, list of files, import paths, etc).
 	if len(args) == 1 && isDirectory(args[0]) {
@@ -155,6 +159,20 @@ func main() {
 	for _, typeName := range types {
 		g.generate(typeName)
 	}
+
+	g.Printf("var _errcodeMap = map[string]int{\n")
+	for _, v := range g.mapKVLine {
+		g.Printf(v)
+	}
+	g.Printf("}\n\n")
+
+	g.Printf("func %s(e error) int {\n", g.codefunc)
+	g.Printf("\tv, ok := _errcodeMap[e.Error()]\n")
+	g.Printf("\tif ok {\n")
+	g.Printf("\t\treturn v\n")
+	g.Printf("\t}\n")
+	g.Printf("\treturn %d\n", g.unknownCode)
+	g.Printf("}\n\n")
 
 	// Format the output.
 	src := g.format()
@@ -188,6 +206,9 @@ type Generator struct {
 
 	trimPrefix  string
 	lineComment bool
+	codefunc    string
+	unknownCode int
+	mapKVLine   []string
 }
 
 func (g *Generator) Printf(format string, args ...interface{}) {
@@ -275,6 +296,12 @@ func (g *Generator) generate(typeName string) {
 		g.Printf("\t_ = x[%s - %s]\n", v.originalName, v.str)
 	}
 	g.Printf("}\n")
+
+	// record all types error message and code
+	for _, v := range values {
+		g.mapKVLine = append(g.mapKVLine, fmt.Sprintf("\t%s.String(): int(%s),\n", v.originalName, v.originalName))
+	}
+
 	runs := splitIntoRuns(values)
 	// The decision of which pattern to use depends on the number of
 	// runs in the numbers. If there's only one, it's easy. For more than
@@ -581,6 +608,10 @@ const stringOneRun = `func (i %[1]s) String() string {
 	}
 	return _%[1]s_name[_%[1]s_index[i]:_%[1]s_index[i+1]]
 }
+
+func (i %[1]s) Error() string {
+	return i.String()
+}
 `
 
 // Arguments to format are:
@@ -597,6 +628,10 @@ const stringOneRunWithOffset = `func (i %[1]s) String() string {
 	}
 	return _%[1]s_name[_%[1]s_index[i] : _%[1]s_index[i+1]]
 }
+
+func (i %[1]s) Error() string {
+	return i.String()
+}
 `
 
 // buildMultipleRuns generates the variables and String method for multiple runs of contiguous values.
@@ -604,6 +639,9 @@ const stringOneRunWithOffset = `func (i %[1]s) String() string {
 func (g *Generator) buildMultipleRuns(runs [][]Value, typeName string) {
 	g.Printf("\n")
 	g.declareIndexAndNameVars(runs, typeName)
+	g.Printf("func (i %s) Error() string {\n", typeName)
+	g.Printf("\treturn i.String()\n")
+	g.Printf("}\n\n")
 	g.Printf("func (i %s) String() string {\n", typeName)
 	g.Printf("\tswitch {\n")
 	for i, values := range runs {
@@ -653,5 +691,9 @@ const stringMap = `func (i %[1]s) String() string {
 		return str
 	}
 	return "%[1]s(" + strconv.FormatInt(int64(i), 10) + ")"
+}
+
+func (i %[1]s) Error() string {
+	return i.String()
 }
 `
