@@ -154,7 +154,12 @@ func main() {
 	g.Printf("\n")
 	g.Printf("package %s", g.pkg.name)
 	g.Printf("\n")
-	g.Printf("import \"strconv\"\n") // Used by all methods.
+	g.Printf(`import (
+	"fmt"
+	"strconv"
+	"strings"
+)
+`) // Used by all methods.
 
 	// Run generate for each type.
 	for _, typeName := range types {
@@ -168,7 +173,51 @@ func main() {
 	}
 	return -1
 }
+
 `, g.codefunc)
+
+	g.Printf(`type wrapErr struct {
+	Err
+	msg string
+}
+
+func (m wrapErr) String() string {
+	return m.msg
+}
+
+func (m wrapErr) Error() string {
+	return m.msg
+}
+
+// Wrap 自定义 error 的包装类，用于扩展错误信息方便定位问题
+func Wrap(format string, args ...any) error {
+	var (
+		we   wrapErr
+		flag bool
+	)
+	for _, arg := range args {
+		// 如果参数类型为 error ，且实现了 Code() int 函数，则获取 code 封装为 wrapErr 类型
+		ae, ok := arg.(error)
+		if !ok {
+			continue
+		}
+		x, ok := ae.(interface{ Code() int })
+		if !ok {
+			continue
+		}
+		we = wrapErr{
+			Err: Err(x.Code()),
+			msg: fmt.Sprintf(strings.ReplaceAll(format, "%%w", "%%v"), args...),
+		}
+		flag = true
+		break
+	}
+	if flag {
+		return we
+	}
+	return fmt.Errorf(format, args...)
+}
+`)
 
 	// Format the output.
 	src := g.format()
