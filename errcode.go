@@ -97,12 +97,13 @@ var (
 
 // Usage is a replacement usage function for the flags package.
 func Usage() {
-	fmt.Fprintf(os.Stderr, "Usage of errcode:\n")
-	fmt.Fprintf(os.Stderr, "\terrcode [flags] -type T [directory]\n")
-	fmt.Fprintf(os.Stderr, "\terrcode [flags] -type T files... # Must be a single package\n")
-	fmt.Fprintf(os.Stderr, "For more information, see:\n")
-	fmt.Fprintf(os.Stderr, "\thttps://github.com/fengxuway/errcode\n")
-	fmt.Fprintf(os.Stderr, "Flags:\n")
+	fmt.Fprint(os.Stderr, "s\n")
+	fmt.Fprint(os.Stderr, "Usage of errcode:\n")
+	fmt.Fprint(os.Stderr, "\terrcode [flags] -type T [directory]\n")
+	fmt.Fprint(os.Stderr, "\terrcode [flags] -type T files... # Must be a single package\n")
+	fmt.Fprint(os.Stderr, "For more information, see:\n")
+	fmt.Fprint(os.Stderr, "\thttps://github.com/fengxuway/errcode\n")
+	fmt.Fprint(os.Stderr, "Flags:\n")
 	flag.PrintDefaults()
 }
 
@@ -160,19 +161,14 @@ func main() {
 		g.generate(typeName)
 	}
 
-	g.Printf("var _ec%sMap = map[string]int{\n", g.codefunc)
-	for _, v := range g.mapKVLine {
-		g.Printf(v)
+	g.Printf("\n")
+	g.Printf(`func %s(e error) int {
+	if x, ok := e.(interface{ Code() int }); ok {
+		return x.Code()
 	}
-	g.Printf("}\n\n")
-
-	g.Printf("func %s(e error) int {\n", g.codefunc)
-	g.Printf("\tv, ok := _ec%sMap[e.Error()]\n", g.codefunc)
-	g.Printf("\tif ok {\n")
-	g.Printf("\t\treturn v\n")
-	g.Printf("\t}\n")
-	g.Printf("\treturn %d\n", g.unknownCode)
-	g.Printf("}\n\n")
+	return -1
+}
+`, g.codefunc)
 
 	// Format the output.
 	src := g.format()
@@ -211,7 +207,7 @@ type Generator struct {
 	mapKVLine   []string
 }
 
-func (g *Generator) Printf(format string, args ...interface{}) {
+func (g *Generator) Printf(format string, args ...any) {
 	fmt.Fprintf(&g.buf, format, args...)
 }
 
@@ -219,9 +215,11 @@ func (g *Generator) Printf(format string, args ...interface{}) {
 type File struct {
 	pkg  *Package  // Package to which this file belongs.
 	file *ast.File // Parsed AST.
+
 	// These fields are reset for each type being generated.
-	typeName string  // Name of the constant type.
-	values   []Value // Accumulator for constant values of that type.
+	typeName string // Name of the constant type.
+
+	values []Value // Accumulator for constant values of that type.
 
 	trimPrefix  string
 	lineComment bool
@@ -364,7 +362,7 @@ func (g *Generator) format() []byte {
 		// Should never happen, but can arise when developing this code.
 		// The user can compile the output to see the error.
 		log.Printf("warning: internal error: invalid Go generated: %s", err)
-		log.Printf("warning: compile the package to analyze the error")
+		log.Print("warning: compile the package to analyze the error")
 		return g.buf.Bytes()
 	}
 	return src
@@ -374,12 +372,14 @@ func (g *Generator) format() []byte {
 type Value struct {
 	originalName string // The name of the constant.
 	name         string // The name with trimmed prefix.
+
 	// The value is stored as a bit pattern alone. The boolean tells us
 	// whether to interpret it as an int64 or a uint64; the only place
 	// this matters is when sorting.
 	// Much of the time the str field is all we need; it is printed
 	// by Value.String.
-	value  uint64 // Will be converted to int64 when needed.
+	value uint64 // Will be converted to int64 when needed.
+
 	signed bool   // Whether the constant is a signed type.
 	str    string // The string representation given by the "go/constant" package.
 }
@@ -393,8 +393,10 @@ func (v *Value) String() string {
 // as appropriate.
 type byValue []Value
 
-func (b byValue) Len() int      { return len(b) }
+func (b byValue) Len() int { return len(b) }
+
 func (b byValue) Swap(i, j int) { b[i], b[j] = b[j], b[i] }
+
 func (b byValue) Less(i, j int) bool {
 	if b[i].signed {
 		return int64(b[i].value) < int64(b[j].value)
@@ -561,11 +563,11 @@ func (g *Generator) createIndexAndNameDecl(run []Value, typeName string, suffix 
 	fmt.Fprintf(b, "_%s_index%s = [...]uint%d{0, ", typeName, suffix, usize(nameLen))
 	for i, v := range indexes {
 		if i > 0 {
-			fmt.Fprintf(b, ", ")
+			fmt.Fprint(b, ", ")
 		}
 		fmt.Fprintf(b, "%d", v)
 	}
-	fmt.Fprintf(b, "}")
+	fmt.Fprint(b, "}")
 	return b.String(), nameConst
 }
 
@@ -612,6 +614,10 @@ const stringOneRun = `func (i %[1]s) String() string {
 func (i %[1]s) Error() string {
 	return i.String()
 }
+
+func (i %[1]s) Code() int {
+	return int(i)
+}
 `
 
 // Arguments to format are:
@@ -632,6 +638,10 @@ const stringOneRunWithOffset = `func (i %[1]s) String() string {
 func (i %[1]s) Error() string {
 	return i.String()
 }
+
+func (i %[1]s) Code() int {
+	return int(i)
+}
 `
 
 // buildMultipleRuns generates the variables and String method for multiple runs of contiguous values.
@@ -639,6 +649,9 @@ func (i %[1]s) Error() string {
 func (g *Generator) buildMultipleRuns(runs [][]Value, typeName string) {
 	g.Printf("\n")
 	g.declareIndexAndNameVars(runs, typeName)
+	g.Printf("func (i %s) Code() int {\n", typeName)
+	g.Printf("\treturn int(i)\n")
+	g.Printf("}\n\n")
 	g.Printf("func (i %s) Error() string {\n", typeName)
 	g.Printf("\treturn i.String()\n")
 	g.Printf("}\n\n")
@@ -695,5 +708,9 @@ const stringMap = `func (i %[1]s) String() string {
 
 func (i %[1]s) Error() string {
 	return i.String()
+}
+
+func (i %[1]s) Code() int {
+	return int(i)
 }
 `
