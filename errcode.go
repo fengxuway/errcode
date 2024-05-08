@@ -89,6 +89,7 @@ import (
 var (
 	typeNames   = flag.String("type", "", "comma-separated list of type names; must be set")
 	limitCode   = flag.Int("limitcode", 0, "set max code for mod")
+	wrapFunc    = flag.String("wrapfunc", "Wrap", "set wrap func name")
 	output      = flag.String("output", "", "output file name; default srcdir/<type>_errcode.go")
 	trimprefix  = flag.String("trimprefix", "", "trim the `prefix` from the generated constant names")
 	linecomment = flag.Bool("linecomment", false, "use line comment text as printed text when present")
@@ -196,7 +197,7 @@ func (m wrapErr) Error() string {
 }
 
 // Wrap 自定义 error 的包装类，用于扩展错误信息方便定位问题
-func Wrap(format string, args ...any) error {
+func %s(format string, args ...any) error {
 	var (
 		we   wrapErr
 		flag bool
@@ -223,7 +224,7 @@ func Wrap(format string, args ...any) error {
 	}
 	return fmt.Errorf(format, args...)
 }
-`)
+`, *wrapFunc)
 
 	// Format the output.
 	src := g.format()
