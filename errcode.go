@@ -80,6 +80,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 
 	"golang.org/x/tools/go/packages"
@@ -87,6 +88,7 @@ import (
 
 var (
 	typeNames   = flag.String("type", "", "comma-separated list of type names; must be set")
+	limitCode   = flag.Int("limitcode", 0, "set max code for mod")
 	output      = flag.String("output", "", "output file name; default srcdir/<type>_errcode.go")
 	trimprefix  = flag.String("trimprefix", "", "trim the `prefix` from the generated constant names")
 	linecomment = flag.Bool("linecomment", false, "use line comment text as printed text when present")
@@ -161,9 +163,13 @@ func main() {
 )
 `) // Used by all methods.
 
+	limit := ""
+	if *limitCode > 0 {
+		limit = "%" + strconv.Itoa(*limitCode)
+	}
 	// Run generate for each type.
 	for _, typeName := range types {
-		g.generate(typeName)
+		g.generate(typeName, limit)
 	}
 
 	g.Printf("\n")
@@ -319,7 +325,7 @@ func (g *Generator) addPackage(pkg *packages.Package) {
 }
 
 // generate produces the String method for the named type.
-func (g *Generator) generate(typeName string) {
+func (g *Generator) generate(typeName, limit string) {
 	values := make([]Value, 0, 100)
 	for _, file := range g.pkg.files {
 		// Set the state for this run of the walker.
@@ -368,7 +374,7 @@ func (g *Generator) generate(typeName string) {
 	case len(runs) <= 10:
 		g.buildMultipleRuns(runs, typeName)
 	default:
-		g.buildMap(runs, typeName)
+		g.buildMap(runs, typeName, limit)
 	}
 }
 
@@ -732,7 +738,7 @@ func (g *Generator) buildMultipleRuns(runs [][]Value, typeName string) {
 
 // buildMap handles the case where the space is so sparse a map is a reasonable fallback.
 // It's a rare situation but has simple code.
-func (g *Generator) buildMap(runs [][]Value, typeName string) {
+func (g *Generator) buildMap(runs [][]Value, typeName, limit string) {
 	g.Printf("\n")
 	g.declareNameVars(runs, typeName, "")
 	g.Printf("\nvar _%s_map = map[%s]string{\n", typeName, typeName)
@@ -744,12 +750,12 @@ func (g *Generator) buildMap(runs [][]Value, typeName string) {
 		}
 	}
 	g.Printf("}\n\n")
-	g.Printf(stringMap, typeName)
+	g.Printf(stringMap, typeName, limit)
 }
 
 // Argument to format is the type name.
 const stringMap = `func (i %[1]s) String() string {
-	if str, ok := _%[1]s_map[i]; ok {
+	if str, ok := _%[1]s_map[i%[2]s]; ok {
 		return str
 	}
 	return "%[1]s(" + strconv.FormatInt(int64(i), 10) + ")"
