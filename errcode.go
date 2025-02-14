@@ -175,13 +175,16 @@ func main() {
 
 	g.Printf("\n")
 	g.Printf(`func %s(e error) int {
+	if e == nil {
+		return 0
+	}
 	if x, ok := e.(interface{ Code() int }); ok {
 		return x.Code()
 	}
-	return -1
+	return %d
 }
 
-`, g.codefunc)
+`, g.codefunc, g.unknownCode)
 
 	g.Printf(`type wrapErr struct {
 	Err
